@@ -2,6 +2,16 @@ import { ensureSchema, getPool } from "../../../lib/db";
 
 const VALID_CATEGORIES = ["work", "lunch", "dinner", "personal"];
 
+function serializeEvent(row) {
+  return {
+    ...row,
+    event_date:
+      row.event_date instanceof Date
+        ? row.event_date.toISOString().slice(0, 10)
+        : String(row.event_date).slice(0, 10),
+  };
+}
+
 export default async function handler(req, res) {
   try {
     await ensureSchema();
@@ -39,7 +49,7 @@ export default async function handler(req, res) {
       [startDate, endDate]
     );
 
-    return res.status(200).json({ events: result.rows });
+    return res.status(200).json({ events: result.rows.map(serializeEvent) });
   }
 
   if (req.method === "POST") {
@@ -58,7 +68,7 @@ export default async function handler(req, res) {
       [eventDate, category, content.trim()]
     );
 
-    return res.status(201).json({ event: result.rows[0] });
+    return res.status(201).json({ event: serializeEvent(result.rows[0]) });
   }
 
   return res.status(405).json({ error: "Method not allowed." });

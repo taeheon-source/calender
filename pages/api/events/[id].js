@@ -2,6 +2,16 @@ import { ensureSchema, getPool } from "../../../lib/db";
 
 const VALID_CATEGORIES = ["work", "lunch", "dinner", "personal"];
 
+function serializeEvent(row) {
+  return {
+    ...row,
+    event_date:
+      row.event_date instanceof Date
+        ? row.event_date.toISOString().slice(0, 10)
+        : String(row.event_date).slice(0, 10),
+  };
+}
+
 export default async function handler(req, res) {
   try {
     await ensureSchema();
@@ -40,7 +50,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: "Event not found." });
     }
 
-    return res.status(200).json({ event: result.rows[0] });
+    return res.status(200).json({ event: serializeEvent(result.rows[0]) });
   }
 
   if (req.method === "DELETE") {
