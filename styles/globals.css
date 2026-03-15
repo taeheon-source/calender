@@ -133,9 +133,40 @@ h2 {
   padding: 14px;
 }
 
+.month-card-single {
+  padding: 18px;
+}
+
 .month-header h2 {
   font-size: 20px;
   margin-bottom: 12px;
+}
+
+.month-header-nav {
+  display: grid;
+  grid-template-columns: 56px 1fr 56px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.month-header-nav h2 {
+  text-align: center;
+  margin: 0;
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.month-nav-button {
+  border: 1px solid rgba(17, 17, 17, 0.1);
+  background: rgba(17, 17, 17, 0.04);
+  border-radius: 18px;
+  height: 48px;
+  font-size: 24px;
+}
+
+.month-nav-button:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 
 .weekday-row,
@@ -153,6 +184,10 @@ h2 {
 
 .days-grid {
   gap: 4px;
+}
+
+.days-grid-large {
+  gap: 8px;
 }
 
 .day-cell {
@@ -179,8 +214,18 @@ h2 {
   background: rgba(17, 17, 17, 0.06);
 }
 
+.day-cell-large {
+  min-height: 152px;
+  padding: 10px;
+}
+
 .day-cell.muted {
   opacity: 0.32;
+}
+
+.day-top {
+  display: grid;
+  gap: 4px;
 }
 
 .day-number {
@@ -200,6 +245,12 @@ h2 {
   line-height: 1.2;
 }
 
+.day-events-list {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
 .event-dots {
   display: flex;
   gap: 4px;
@@ -207,11 +258,31 @@ h2 {
   flex-wrap: wrap;
 }
 
+.day-event-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
 .event-dot {
   width: 7px;
   height: 7px;
   border-radius: 999px;
   background: var(--dot-color);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.day-event-text {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
 .event-count {
@@ -368,8 +439,8 @@ h2 {
 }
 
 @media (max-width: 1280px) {
-  .month-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .day-cell-large {
+    min-height: 132px;
   }
 }
 
@@ -387,16 +458,16 @@ h2 {
     align-items: flex-start;
   }
 
-  .month-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .month-header-nav {
+    grid-template-columns: 48px 1fr 48px;
+  }
+
+  .day-cell-large {
+    min-height: 116px;
   }
 }
 
 @media (max-width: 640px) {
-  .month-grid {
-    grid-template-columns: 1fr;
-  }
-
   .calendar-panel,
   .composer-panel,
   .detail-panel {
@@ -405,6 +476,19 @@ h2 {
 
   .day-cell {
     min-height: 72px;
+  }
+
+  .day-cell-large {
+    min-height: 96px;
+    padding: 8px 6px;
+  }
+
+  .month-header-nav h2 {
+    font-size: 22px;
+  }
+
+  .day-event-text {
+    font-size: 10px;
   }
 
   .form-actions,

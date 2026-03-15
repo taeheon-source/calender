@@ -17,9 +17,9 @@ import { getHolidayName } from "../lib/holidays";
 const YEAR = 2026;
 const CATEGORY_OPTIONS = [
   { value: "work", label: "업무", color: "#111111" },
-  { value: "lunch", label: "점심", color: "#767676" },
-  { value: "dinner", label: "저녁", color: "#bcbcbc" },
-  { value: "personal", label: "개인", color: "#575757" },
+  { value: "lunch", label: "점심", color: "#138a36" },
+  { value: "dinner", label: "저녁", color: "#d62828" },
+  { value: "personal", label: "개인", color: "#d4ac0d" },
 ];
 
 function toDateKey(date) {
@@ -49,24 +49,22 @@ function sortEvents(events) {
   });
 }
 
-function buildMonths() {
-  return Array.from({ length: 12 }, (_, index) => {
-    const monthDate = new Date(YEAR, index, 1);
-    const monthStart = startOfMonth(monthDate);
-    const monthEnd = endOfMonth(monthDate);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+function buildMonth(monthIndex) {
+  const monthDate = new Date(YEAR, monthIndex, 1);
+  const monthStart = startOfMonth(monthDate);
+  const monthEnd = endOfMonth(monthDate);
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
-    return {
-      label: format(monthDate, "M월", { locale: ko }),
-      month: index + 1,
-      days: eachDayOfInterval({ start: calendarStart, end: calendarEnd }),
-    };
-  });
+  return {
+    label: format(monthDate, "yyyy년 M월", { locale: ko }),
+    month: monthIndex + 1,
+    days: eachDayOfInterval({ start: calendarStart, end: calendarEnd }),
+  };
 }
 
 export default function Home() {
-  const months = useMemo(() => buildMonths(), []);
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(0);
   const [events, setEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState("2026-01-01");
   const [category, setCategory] = useState("work");
@@ -77,6 +75,10 @@ export default function Home() {
 
   const eventsByDate = useMemo(() => groupEventsByDate(events), [events]);
   const selectedEvents = eventsByDate[selectedDate] || [];
+  const currentMonth = useMemo(
+    () => buildMonth(currentMonthIndex),
+    [currentMonthIndex]
+  );
 
   useEffect(() => {
     fetch("/api/events?year=2026")
@@ -180,12 +182,24 @@ export default function Home() {
     resetForm(dateKey);
   }
 
+  function moveMonth(direction) {
+    setCurrentMonthIndex((current) => {
+      const nextMonth = current + direction;
+      if (nextMonth < 0 || nextMonth > 11) {
+        return current;
+      }
+      return nextMonth;
+    });
+  }
+
   function beginEdit(schedule) {
     setSelectedDate(schedule.event_date);
     setEditingId(schedule.id);
     setCategory(schedule.category);
     setContent(schedule.content);
     setStatusMessage(`수정 중: ${toKoreanDateLabel(schedule.event_date)}`);
+    const monthFromEvent = parseISO(schedule.event_date).getMonth();
+    setCurrentMonthIndex(monthFromEvent);
   }
 
   return (
@@ -204,7 +218,7 @@ export default function Home() {
           <div className="panel-heading">
             <div>
               <p className="eyebrow">South Korea / KST</p>
-              <h1>2026 Annual Calendar</h1>
+              <h1>2026 Monthly Calendar</h1>
             </div>
             <div className="legend">
               {CATEGORY_OPTIONS.map((option) => (
@@ -219,69 +233,88 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="month-grid">
-            {months.map((month) => (
-              <article key={month.month} className="month-card">
-                <div className="month-header">
-                  <h2>{month.label}</h2>
-                  <div className="weekday-row">
-                    {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
-                      <span key={day}>{day}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="days-grid">
-                  {month.days.map((day) => {
-                    const dateKey = toDateKey(day);
-                    const holidayName = getHolidayName(dateKey);
-                    const isWeekend = [0, 6].includes(getDay(day));
-                    const isHoliday = Boolean(holidayName);
-                    const isCurrentMonth = isSameMonth(day, new Date(YEAR, month.month - 1, 1));
-                    const dayEvents = eventsByDate[dateKey] || [];
-                    const selected = selectedDate === dateKey;
+          <article className="month-card month-card-single">
+            <div className="month-header month-header-nav">
+              <button
+                type="button"
+                className="month-nav-button"
+                onClick={() => moveMonth(-1)}
+                disabled={currentMonthIndex === 0}
+              >
+                ←
+              </button>
+              <h2>{currentMonth.label}</h2>
+              <button
+                type="button"
+                className="month-nav-button"
+                onClick={() => moveMonth(1)}
+                disabled={currentMonthIndex === 11}
+              >
+                →
+              </button>
+            </div>
+            <div className="weekday-row">
+              {["일", "월", "화", "수", "목", "금", "토"].map((day) => (
+                <span key={day}>{day}</span>
+              ))}
+            </div>
+            <div className="days-grid days-grid-large">
+              {currentMonth.days.map((day) => {
+                const dateKey = toDateKey(day);
+                const holidayName = getHolidayName(dateKey);
+                const isWeekend = [0, 6].includes(getDay(day));
+                const isHoliday = Boolean(holidayName);
+                const isCurrentMonth = isSameMonth(
+                  day,
+                  new Date(YEAR, currentMonth.month - 1, 1)
+                );
+                const dayEvents = eventsByDate[dateKey] || [];
+                const selected = selectedDate === dateKey;
 
-                    return (
-                      <button
-                        key={dateKey}
-                        type="button"
-                        className={`day-cell ${selected ? "selected" : ""} ${
-                          !isCurrentMonth ? "muted" : ""
+                return (
+                  <button
+                    key={dateKey}
+                    type="button"
+                    className={`day-cell day-cell-large ${selected ? "selected" : ""} ${
+                      !isCurrentMonth ? "muted" : ""
+                    }`}
+                    onClick={() => handleSelectDate(dateKey)}
+                  >
+                    <div className="day-top">
+                      <span
+                        className={`day-number ${
+                          isWeekend || isHoliday ? "holiday-text" : ""
                         }`}
-                        onClick={() => handleSelectDate(dateKey)}
                       >
-                        <span
-                          className={`day-number ${
-                            isWeekend || isHoliday ? "holiday-text" : ""
-                          }`}
-                        >
-                          {format(day, "d")}
-                        </span>
-                        <span className="holiday-name">{holidayName || "\u00A0"}</span>
-                        <div className="event-dots">
-                          {dayEvents.slice(0, 3).map((eventItem) => {
-                            const option = CATEGORY_OPTIONS.find(
-                              (categoryItem) => categoryItem.value === eventItem.category
-                            );
+                        {format(day, "d")}
+                      </span>
+                      <span className="holiday-name">{holidayName || "\u00A0"}</span>
+                    </div>
+                    <div className="day-events-list">
+                      {dayEvents.slice(0, 3).map((eventItem) => {
+                        const option = CATEGORY_OPTIONS.find(
+                          (categoryItem) => categoryItem.value === eventItem.category
+                        );
 
-                            return (
-                              <span
-                                key={eventItem.id}
-                                className="event-dot"
-                                style={{ "--dot-color": option?.color || "#111111" }}
-                              />
-                            );
-                          })}
-                          {dayEvents.length > 3 ? (
-                            <span className="event-count">+{dayEvents.length - 3}</span>
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </article>
-            ))}
-          </div>
+                        return (
+                          <span key={eventItem.id} className="day-event-item">
+                            <span
+                              className="event-dot"
+                              style={{ "--dot-color": option?.color || "#111111" }}
+                            />
+                            <span className="day-event-text">{eventItem.content}</span>
+                          </span>
+                        );
+                      })}
+                      {dayEvents.length > 3 ? (
+                        <span className="event-count">+{dayEvents.length - 3} more</span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </article>
         </section>
 
         <section className="panel composer-panel">
