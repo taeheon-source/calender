@@ -368,6 +368,11 @@ export default function Home() {
     setCurrentMonthIndex(parseISO(schedule.event_date).getMonth());
   }
 
+  async function handleLogout() {
+    await fetch("/api/login", { method: "DELETE" });
+    window.location.replace("/login");
+  }
+
   return (
     <>
       <Head>
@@ -396,6 +401,9 @@ export default function Home() {
                   {option.label}
                 </span>
               ))}
+              <button className="logout-button" type="button" onClick={handleLogout}>
+                로그아웃
+              </button>
             </div>
           </div>
 
