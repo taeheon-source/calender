@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   endOfMonth,
   endOfWeek,
@@ -15,6 +15,7 @@ import {
 import { ko } from "date-fns/locale";
 import { getHolidayName } from "../lib/holidays";
 import { buildRecurringOccurrences } from "../lib/recurrence";
+import LoginScreen from "../components/LoginScreen";
 
 const YEAR = 2026;
 const WEEKDAY_OPTIONS = [
@@ -115,7 +116,7 @@ function getCategoryMeta(category) {
   return CATEGORY_OPTIONS.find((option) => option.value === category) || CATEGORY_OPTIONS[0];
 }
 
-export default function Home() {
+function Calendar({ authFetch, onLogout }) {
   const initialState = useMemo(() => buildInitialDate(), []);
   const [currentMonthIndex, setCurrentMonthIndex] = useState(initialState.monthIndex);
   const [selectedDate, setSelectedDate] = useState(initialState.dateKey);
@@ -153,14 +154,14 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/events?year=2026").then(async (response) => {
+      authFetch("/api/events?year=2026").then(async (response) => {
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || "일정을 불러오지 못했습니다.");
         }
         return data.events || [];
       }),
-      fetch("/api/recurring?year=2026").then(async (response) => {
+      authFetch("/api/recurring?year=2026").then(async (response) => {
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || "반복업무를 불러오지 못했습니다.");
@@ -203,7 +204,7 @@ export default function Home() {
     const url = editingId ? `/api/events/${editingId}` : "/api/events";
 
     try {
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -251,7 +252,7 @@ export default function Home() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/recurring", {
+      const response = await authFetch("/api/recurring", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -292,7 +293,7 @@ export default function Home() {
   async function handleDelete(id) {
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/events/${id}`, { method: "DELETE" });
+      const response = await authFetch(`/api/events/${id}`, { method: "DELETE" });
       const data = await response.json();
 
       if (!response.ok) {
@@ -316,7 +317,7 @@ export default function Home() {
   async function handleDeleteRecurring(id) {
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/recurring/${id}`, { method: "DELETE" });
+      const response = await authFetch(`/api/recurring/${id}`, { method: "DELETE" });
       const data = await response.json();
 
       if (!response.ok) {
@@ -368,11 +369,6 @@ export default function Home() {
     setCurrentMonthIndex(parseISO(schedule.event_date).getMonth());
   }
 
-  async function handleLogout() {
-    await fetch("/api/login", { method: "DELETE" });
-    window.location.replace("/login");
-  }
-
   return (
     <>
       <Head>
@@ -401,7 +397,7 @@ export default function Home() {
                   {option.label}
                 </span>
               ))}
-              <button className="logout-button" type="button" onClick={handleLogout}>
+              <button className="logout-button" type="button" onClick={() => onLogout()}>
                 로그아웃
               </button>
             </div>
@@ -828,4 +824,57 @@ export default function Home() {
       ) : null}
     </>
   );
+}
+
+export default function Home() {
+  const [session, setSession] = useState(null);
+  const [notice, setNotice] = useState("");
+
+  const logout = useCallback((message = "") => {
+    setSession(null);
+    setNotice(message);
+  }, []);
+
+  // 로그인 후 30분이 지나면 자동으로 로그아웃한다.
+  useEffect(() => {
+    if (!session) {
+      return undefined;
+    }
+
+    const timer = setTimeout(
+      () => logout("30분이 지나 자동으로 로그아웃되었습니다."),
+      Math.max(session.expiresAt - Date.now(), 0)
+    );
+    return () => clearTimeout(timer);
+  }, [session, logout]);
+
+  const authFetch = useCallback(
+    async (url, options = {}) => {
+      const response = await fetch(url, {
+        ...options,
+        headers: { ...options.headers, Authorization: `Bearer ${session?.token}` },
+      });
+
+      if (response.status === 401) {
+        logout("로그인이 만료되었습니다. 다시 입력해주세요.");
+      }
+
+      return response;
+    },
+    [session, logout]
+  );
+
+  if (!session) {
+    return (
+      <LoginScreen
+        notice={notice}
+        onLogin={(data) => {
+          setNotice("");
+          setSession(data);
+        }}
+      />
+    );
+  }
+
+  return <Calendar authFetch={authFetch} onLogout={logout} />;
 }
