@@ -1,18 +1,12 @@
-import {
-  AUTH_COOKIE,
-  AUTH_MAX_AGE,
-  createAuthToken,
-  safeEqual,
-} from "../../lib/auth";
+import { AUTH_COOKIE, createAuthToken, safeEqual } from "../../lib/auth";
 
+// maxAge를 생략하면 세션 쿠키가 되어 브라우저를 닫으면 로그인이 풀린다.
 function buildCookie(value, maxAge) {
-  const parts = [
-    `${AUTH_COOKIE}=${value}`,
-    "Path=/",
-    "HttpOnly",
-    "SameSite=Lax",
-    `Max-Age=${maxAge}`,
-  ];
+  const parts = [`${AUTH_COOKIE}=${value}`, "Path=/", "HttpOnly", "SameSite=Lax"];
+
+  if (maxAge !== undefined) {
+    parts.push(`Max-Age=${maxAge}`);
+  }
 
   if (process.env.NODE_ENV === "production") {
     parts.push("Secure");
@@ -37,7 +31,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "비밀번호가 올바르지 않습니다." });
     }
 
-    res.setHeader("Set-Cookie", buildCookie(expected, AUTH_MAX_AGE));
+    res.setHeader("Set-Cookie", buildCookie(expected));
     return res.status(200).json({ ok: true });
   }
 
