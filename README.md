@@ -21,6 +21,8 @@ The app auto-creates the `calendar_events` table on first API access.
 
 ## Password protection
 
-Set `SITE_PASSWORD` to require a password for every page and API route.
-Visitors are redirected to `/login`; a login lasts until the browser is closed.
-Changing `SITE_PASSWORD` logs everyone out. If it is not set, the site is open.
+Set `SITE_PASSWORD` to require a password before the calendar is shown.
+The password is asked on every page load (refresh or new tab), and a login
+expires automatically after 30 minutes. All API routes reject requests without
+a valid session token. Changing `SITE_PASSWORD` logs everyone out.
+If it is not set, the API is open.

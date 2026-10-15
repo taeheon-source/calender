@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE, createAuthToken, safeEqual } from "./lib/auth";
+import { verifySessionToken } from "./lib/auth";
 
+// 화면에는 데이터가 없고 모든 일정은 API로 불러오므로 API만 막는다.
+// 토큰은 브라우저 메모리에만 있어서 새로고침하면 다시 비밀번호를 물어본다.
 export async function middleware(request) {
   const password = process.env.SITE_PASSWORD;
 
@@ -9,23 +11,16 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get(AUTH_COOKIE)?.value;
-  if (token && safeEqual(token, await createAuthToken(password))) {
+  const header = request.headers.get("authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+
+  if (await verifySessionToken(password, token)) {
     return NextResponse.next();
   }
 
-  const { pathname, search } = request.nextUrl;
-
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
-  const loginUrl = request.nextUrl.clone();
-  loginUrl.pathname = "/login";
-  loginUrl.search = `?next=${encodeURIComponent(pathname + search)}`;
-  return NextResponse.redirect(loginUrl);
+  return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 }
 
 export const config = {
-  matcher: ["/((?!login|api/login|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/api/((?!login).*)"],
 };

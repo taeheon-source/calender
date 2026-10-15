@@ -1,18 +1,7 @@
 import Head from "next/head";
-import { useRouter } from "next/router";
 import { useState } from "react";
 
-function safeNextPath(value) {
-  // 외부 사이트로의 리다이렉트를 막기 위해 내부 경로만 허용한다.
-  if (typeof value === "string" && value.startsWith("/") && !value.startsWith("//")) {
-    return value;
-  }
-
-  return "/";
-}
-
-export default function LoginPage() {
-  const router = useRouter();
+export default function LoginScreen({ onLogin, notice }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -28,13 +17,13 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
         throw new Error(data.error || "로그인에 실패했습니다.");
       }
 
-      window.location.replace(safeNextPath(router.query.next));
+      onLogin(data);
     } catch (submitError) {
       setError(submitError.message);
       setSubmitting(false);
@@ -70,7 +59,7 @@ export default function LoginPage() {
             {submitting ? "확인 중..." : "입장"}
           </button>
 
-          {error ? <p className="login-error">{error}</p> : null}
+          {error || notice ? <p className="login-error">{error || notice}</p> : null}
         </form>
       </main>
     </>
